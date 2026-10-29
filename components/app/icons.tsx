@@ -51,9 +51,9 @@ export function LabelDot({ color, className }: { color: string; className?: stri
 
 export function Label({ name, color }: { name: string; color: string }) {
   return (
-    <span className="inline-flex h-6 max-w-[220px] items-center gap-1.5 rounded-full border border-border px-2 text-[12px] text-muted-foreground">
-      <LabelDot color={color} />
-      <span className="truncate">{name}</span>
+    <span className="inline-flex items-start gap-1.5 rounded-xl border border-border px-2 py-[3px] text-[12px] leading-4 text-muted-foreground">
+      <LabelDot color={color} className="mt-1" />
+      <span>{name}</span>
     </span>
   );
 }

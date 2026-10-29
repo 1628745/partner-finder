@@ -2,6 +2,7 @@
 
 import { ArrowRight, Copy, Download, Globe, Link2, Loader2, Plus, RefreshCw, RotateCcw, Search, Sparkles, X } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { DraftStatus, Label, LabelDot, ScoreBars } from "@/components/app/icons";
 import { Shortcut } from "@/components/app/shortcut";
@@ -36,7 +37,9 @@ function Section({
   hint,
   action,
   children,
+  transitionName,
 }: {
+  transitionName?: string;
   step: number;
   title: React.ReactNode;
   hint?: string;
@@ -44,7 +47,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[10px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.25)]">
+    <section
+      className="overflow-hidden rounded-[10px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
+      style={transitionName ? { viewTransitionName: transitionName } : undefined}
+    >
       <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border px-4 py-2">
         <span className="grid size-5 place-items-center rounded-[5px] border border-border text-[11px] font-medium text-muted-foreground tabular-nums">
           {step}
@@ -103,6 +109,7 @@ export default function Home() {
   const [drafting, setDrafting] = useState<string | null>(null);
   const [error, setError] = useState<{ step: Step; message: string } | null>(null);
   const [searchNote, setSearchNote] = useState("");
+  const [filter, setFilter] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   // Restore the last session from this browser.
@@ -132,6 +139,20 @@ export default function Home() {
     const i = categories.findIndex((c) => c.name === name);
     return LABEL_COLORS[(i < 0 ? categories.length : i) % LABEL_COLORS.length];
   };
+
+  // Shows one category's partners. Rows slide into place with a view transition.
+  function applyFilter(next: string | null) {
+    const update = () => {
+      setFilter(next);
+      if (next) setOpenId((id) => (partners.find((p) => p.id === id)?.category === next ? id : null));
+    };
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!document.startViewTransition || reduceMotion) {
+      update();
+      return;
+    }
+    document.startViewTransition(() => flushSync(update));
+  }
 
   async function run(step: NonNullable<typeof busy>, fn: () => Promise<void>) {
     setBusy(step);
@@ -178,6 +199,7 @@ export default function Home() {
       );
       setPartners(res.partners);
       setOpenId(null);
+      setFilter(null);
       setSearchNote(
         `Picked from ${res.candidateCount} search results` +
           (res.dropped ? ` · ${res.dropped} picks dropped because they weren't in the cited result` : ""),
@@ -233,6 +255,7 @@ export default function Home() {
     setCategories([]);
     setPartners([]);
     setOpenId(null);
+    setFilter(null);
     setError(null);
   }
 
@@ -244,6 +267,7 @@ export default function Home() {
   }
 
   const openPartner = partners.find((p) => p.id === openId);
+  const visible = filter ? partners.filter((p) => p.category === filter) : partners;
 
   useHotkeys([
     { keys: "mod+enter", allowInInput: true, handler: nextStep },
@@ -253,7 +277,8 @@ export default function Home() {
       handler: (e) => {
         const el = e.target as HTMLElement;
         if (["INPUT", "TEXTAREA"].includes(el.tagName)) el.blur();
-        else setOpenId(null);
+        else if (openId) setOpenId(null);
+        else if (filter) applyFilter(null);
       },
     },
     { keys: "c", enabled: !!openPartner?.email, handler: () => openPartner && copyEmail(openPartner) },
@@ -457,12 +482,26 @@ export default function Home() {
         {partners.length > 0 && (
           <Section
             step={3}
-            title={`${partners.length} potential partners`}
-            hint="Click a row for an outreach draft."
+            transitionName="partners"
+            title={filter ? `${visible.length} of ${partners.length} partners` : `${partners.length} potential partners`}
+            hint={filter ? undefined : "Click a row for an outreach draft, or a category to filter."}
             action={
-              <Button variant="outline" size="sm" className="h-7 rounded-md text-[12px]" onClick={() => downloadCsv(profile, partners)}>
-                <Download /> Export CSV
-              </Button>
+              <>
+                {filter && (
+                  <button
+                    onClick={() => applyFilter(null)}
+                    className="inline-flex h-7 max-w-[360px] items-center gap-1.5 rounded-md border border-border bg-[#1e1f22] pr-1.5 pl-2.5 text-[12px] text-foreground hover:bg-[#25262a]"
+                    title="Show all categories (Esc)"
+                  >
+                    <LabelDot color={colorOf(filter)} />
+                    <span className="truncate">{filter}</span>
+                    <X className="size-3.5 shrink-0 text-muted-foreground" />
+                  </button>
+                )}
+                <Button variant="outline" size="sm" className="h-7 rounded-md text-[12px]" onClick={() => downloadCsv(profile, partners)}>
+                  <Download /> Export CSV
+                </Button>
+              </>
             }
           >
             {errorFor("email") && (
@@ -482,15 +521,16 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {partners.map((p) => {
+                  {visible.map((p) => {
                     const open = openId === p.id;
                     const state = drafting === p.id ? "drafting" : p.email ? "done" : "none";
                     return (
                       <Fragment key={p.id}>
                         <tr
                           onClick={() => toggleRow(p)}
+                          style={{ viewTransitionName: `row-${p.id}` }}
                           className={cn(
-                            "cursor-default border-t border-border/70 align-top transition-colors hover:bg-row-hover",
+                            "cursor-pointer border-t border-border/70 align-top transition-colors hover:bg-row-hover",
                             open && "bg-row-selected hover:bg-row-selected",
                           )}
                         >
@@ -517,13 +557,22 @@ export default function Home() {
                             </a>
                           </td>
                           <td className="py-3 pr-3">
-                            <Label name={p.category} color={colorOf(p.category)} />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                applyFilter(filter === p.category ? null : p.category);
+                              }}
+                              title={filter === p.category ? "Show all categories" : "Show only this category"}
+                              className="cursor-default rounded-xl text-left transition-colors hover:[&>span]:border-[#3b3e45] hover:[&>span]:text-foreground"
+                            >
+                              <Label name={p.category} color={colorOf(p.category)} />
+                            </button>
                           </td>
                           <td className="py-3 pr-4 leading-[1.55] text-[#d0d6e0]">{p.why}</td>
                           <td className="py-3 pr-4 text-muted-foreground">{p.contact_role}</td>
                         </tr>
                         {open && (
-                          <tr className="bg-row-selected">
+                          <tr className="bg-row-selected" style={{ viewTransitionName: `email-${p.id}` }}>
                             <td colSpan={5} className="px-4 pb-4">
                               <div className="rounded-lg border border-border bg-background">
                                 <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2 text-[12px]">

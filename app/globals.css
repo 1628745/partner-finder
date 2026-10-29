@@ -144,6 +144,12 @@
     -webkit-font-smoothing: antialiased;
     font-feature-settings: "cv01", "ss03";
   }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary {
+    cursor: pointer;
+  }
   ::selection {
     background: color-mix(in oklch, var(--primary), transparent 60%);
   }
@@ -151,4 +157,16 @@
     scrollbar-width: thin;
     scrollbar-color: #2a2c31 transparent;
   }
+}
+
+/* Category filtering: rows glide to their new positions, removed rows fade. */
+::view-transition-group(*) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
 }
