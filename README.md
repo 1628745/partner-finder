@@ -22,22 +22,13 @@ Search provider: set one of `EXA_API_KEY` (best: it can restrict results to comp
 
 ## Keyboard
 
-| Keys | Action |
-| --- | --- |
-| `⌘K` | Command menu (actions, navigation, jump to any partner) |
-| `?` | All shortcuts |
-| `N` | New analysis |
-| `⌘↵` | Run the next step |
-| `G` `O` / `G` `C` / `G` `P` | Go to profile / categories / partners |
-| `J` `K`, `↵`, `Esc` | Move, open, close |
-| `E` / `R` / `C` | Draft / regenerate / copy email |
-| `⇧G` / `⇧E` | Group by category / export CSV |
-| `[` | Toggle sidebar |
+- `⌘↵` runs the next step (analyze, suggest categories, find partners)
+- `Esc` closes the open email
+- `C` copies the open email
 
 ## Files
 
-- `app/page.tsx`: app shell and keyboard shortcuts
-- `components/app/`: sidebar, views, detail panels, command menu (built on shadcn/ui in `components/ui/`)
+- `app/page.tsx`: the whole UI, built on shadcn/ui (`components/ui/`)
 - `app/api/{profile,categories,partners,email}/route.ts`: one route per step, prompts inline
 - `lib/llm.ts`: Claude structured-output call (`claude-opus-5-5`)
 - `lib/search.ts`: Exa / Tavily / Serper adapters

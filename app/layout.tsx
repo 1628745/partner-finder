@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={cn("dark font-sans", inter.variable)}>
-      <body className="bg-sidebar text-foreground">
+      <body className="bg-background text-foreground">
         <TooltipProvider delayDuration={400}>{children}</TooltipProvider>
         <Toaster theme="dark" position="bottom-right" />
       </body>
